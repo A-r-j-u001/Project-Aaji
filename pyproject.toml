@@ -4,24 +4,29 @@ version = "0.1.0"
 requires-python = ">=3.11"
 
 [tool.ruff]
-# Enable strict rules for security and code quality
+# Top-level settings
+line-length = 120
+
+[tool.ruff.lint]
+# Enable specific rules
 select = [
     "E",   # pycodestyle errors
     "F",   # Pyflakes
-    "S",   # Bandit (Security vulnerabilities)
-    "B",   # Bugbear (Common bugs)
-    "I",   # Isort (Import sorting)
+    "S",   # Bandit (Security)
+    "B",   # Bugbear
+    "I",   # Isort
 ]
+# Ignore rules for Hackathon speed
 ignore = [
     "E501", # Line too long
     "S105", # Hardcoded password
     "F401", # Unused imports
     "F841", # Unused variables
-    "B008", # Function call in argument defaults (FastAPI Header/Form)
+    "B008", # Function call in argument defaults
 ]
-
-[tool.ruff.per-file-ignores]
-"tests/*" = ["S101"] # Allow assert in tests
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"] # Allow assert in tests
