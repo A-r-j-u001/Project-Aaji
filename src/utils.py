@@ -15,9 +15,10 @@ async def check_scam_intent(message: dict) -> bool:
 import os
 import httpx
 import json
+from src.prompts import AAJI_SYSTEM_PROMPT
 
 # Gemini Configuration
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
 
 async def call_gemini_api(history: list, system_prompt: str) -> str:
     """
