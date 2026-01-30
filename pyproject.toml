@@ -1,0 +1,21 @@
+[project]
+name = "project-aaji"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.ruff]
+# Enable strict rules for security and code quality
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "S",   # Bandit (Security vulnerabilities)
+    "B",   # Bugbear (Common bugs)
+    "I",   # Isort (Import sorting)
+]
+ignore = []
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["S101"] # Allow assert in tests
+
+[tool.ruff.lint.isort]
+combine-as-imports = true

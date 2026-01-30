@@ -1,0 +1,72 @@
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+langchain==0.1.0
+langgraph==0.0.10
+langchain-openai==0.0.5
+redis==5.0.1
+pydantic==2.6.0
+httpx==0.26.0
+python-dotenv==1.0.0
+regex
+.env.example
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-...
+# Redis is required for LangGraph persistence
+REDIS_URL=redis://localhost:6379/0
+# Secret key for your API
+API_SECRET_KEY=hackathon-secret-123
+main.py (Boilerplate to ensure you pass the input check)
+from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict
+# Import your graph here later
+# from app.agent.graph import app_graph
+
+app = FastAPI(title="Project Aaji: Agentic Honey-Pot")
+
+# 1. Input Models (Strict adherence to Spec)
+class Message(BaseModel):
+    sender: str
+    text: str
+    timestamp: str
+
+class IncomingRequest(BaseModel):
+    sessionId: str
+    message: Message
+    conversationHistory: List[dict] = []
+
+# 2. Mock Callback Function (To be implemented fully in Phase 3)
+async def send_guvi_callback(session_id: str, data: dict):
+    # Logic to POST to https://hackathon.guvi.in/api/updateHoneyPotFinalResult
+    pass
+
+@app.post("/message")
+async def chat_endpoint(
+    request: IncomingRequest, 
+    background_tasks: BackgroundTasks,
+    x_api_key: str = Header(...)
+):
+    # Auth Check
+    if x_api_key != "hackathon-secret-123": # Load from env in real app
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    # TODO: Invoke LangGraph here
+    # inputs = {"messages": [request.message]}
+    # config = {"configurable": {"thread_id": request.sessionId}}
+    # output = await app_graph.ainvoke(inputs, config)
+
+    # Mock Response for passing validation immediately
+    return {
+        "status": "success",
+        "scamDetected": True, # This would come from the Graph logic
+        "engagementMetrics": {
+            "engagementDurationSeconds": 120,
+            "totalMessagesExchanged": len(request.conversationHistory) + 1
+        },
+        "extractedIntelligence": {
+            "bankAccounts": [],
+            "upiIds": [],
+            "phishingLinks": []
+        },
+        "agentNotes": "Processing scammer input..."
+    }
