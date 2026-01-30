@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv() # Load enviroment variables
+
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 
 from src.graph import aaji_graph
