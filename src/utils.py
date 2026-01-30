@@ -1,4 +1,5 @@
 import re
+from typing import Dict, Tuple
 
 # Gemini Disabled due to recurring library/env crashes
 # import google.generativeai as genai ...
