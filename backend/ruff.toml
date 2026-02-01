@@ -1,0 +1,5 @@
+line-length = 120
+
+[lint]
+select = ["E", "F"]
+ignore = ["E402"] # Ignore import not at top of file (needed for dotenv)

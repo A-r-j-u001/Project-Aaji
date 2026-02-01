@@ -10,6 +10,7 @@ class AgentState(TypedDict):
     scam_detected: bool
     intelligence: Dict[str, Any]
     final_response: Dict[str, Any]
+    channel_context: str
 
 # --- Nodes ---
 
@@ -22,7 +23,8 @@ async def detect_intent(state: AgentState):
 async def engage_scammer(state: AgentState):
     """The 'Aaji' Persona Node"""
     # Uses Gemini to generate a confused grandmother response
-    response, captured_data = await run_aaji_persona(state["messages"])
+    channel = state.get("channel_context", "whatsapp")
+    response, captured_data = await run_aaji_persona(state["messages"], channel=channel)
     
     # Update intelligence if we found UPI/Bank details
     new_intel = {**state.get("intelligence", {}), **captured_data}
