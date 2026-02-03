@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: aaji-agent-backend
+    env: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: API_SECRET_KEY
+        value: hackathon-secret-123
+      - key: META_VERIFY_TOKEN
+        value: aaji_meta_secret_123
