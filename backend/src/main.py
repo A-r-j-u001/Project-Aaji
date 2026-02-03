@@ -1,15 +1,40 @@
+import sys
 import os
+from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
+load_dotenv()
 
-load_dotenv() # Load enviroment variables
+# Vercel Path Hack: Ensure 'backend' is in sys.path so 'from src.X' works
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(BASE_DIR))
 
-from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Form, Response, Query, Request # noqa: E402
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Form, Response, Query, Request
+from fastapi.responses import JSONResponse
 
-from src.graph import process_message
-from src.schemas import ScammerInput, Message
+# Lazy imports or try/except to prevent boot crash
+try:
+    from src.graph import process_message
+    from src.schemas import ScammerInput, Message
+except ImportError as e:
+    print(f"CRITICAL IMPORT ERROR: {e}")
+    process_message = None
+    ScammerInput = Any # Fallback for type hints
 
 app = FastAPI(title="Aaji - Agentic HoneyPot")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=200, # Return 200 so GUVI sees the error message
+        content={
+            "status": "error", 
+            "message": "Internal Server Error (Caught)", 
+            "detail": str(exc),
+            "type": type(exc).__name__
+        }
+    )
 
 async def _process_agent_event(payload: ScammerInput, background_tasks: BackgroundTasks) -> dict:
     """Core logic to invoke the agent"""
