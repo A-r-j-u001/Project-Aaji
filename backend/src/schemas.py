@@ -4,17 +4,24 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class Message(BaseModel):
-    model_config = ConfigDict(strict=True)
+    # model_config = ConfigDict(strict=False)
     sender: str
     text: str
-    timestamp: str
+    timestamp: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class ScammerInput(BaseModel):
-    model_config = ConfigDict(strict=True)
-    sessionId: str
+    # model_config = ConfigDict(strict=False)
+    sessionId: str = Field(..., alias="session_id") # Allow session_id
     message: Message
-    conversationHistory: List[dict] = Field(default=[], alias="conversation_history") # Allow input as conversationHistory or conversation_history
-    metadata: Optional[Dict[str, Any]] = None
+    conversationHistory: List[dict] = Field(default=[], alias="conversation_history") 
+    metadata: Optional[Dict[str, Any]] = Field(default={})
+
+    class Config:
+        populate_by_name = True
+        extra = "allow"
 
 class AgentResponse(BaseModel):
     model_config = ConfigDict(strict=True)
