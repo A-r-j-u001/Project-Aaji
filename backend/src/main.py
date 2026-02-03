@@ -6,7 +6,7 @@ load_dotenv() # Load enviroment variables
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Form, Response, Query, Request # noqa: E402
 
-from src.graph import aaji_graph
+from src.graph import process_message
 from src.schemas import ScammerInput, Message
 
 app = FastAPI(title="Aaji - Agentic HoneyPot")
@@ -16,17 +16,9 @@ async def _process_agent_event(payload: ScammerInput, background_tasks: Backgrou
     # 2. Context Extraction (Channel Agnostic)
     channel = payload.metadata.get("channel", "whatsapp") if payload.metadata else "whatsapp"
     
-    # 3. Agent Execution (The Brain)
-    initial_state = {
-        "messages": payload.conversationHistory + [payload.message.model_dump()],
-        "scam_detected": False,
-        "intelligence": {},
-        "final_response": {},
-        "channel_context": channel
-    }
-    
-    result = await aaji_graph.ainvoke(initial_state)
-    final_state = result["final_response"]
+    # 3. Agent Execution (Simple Async - No LangGraph)
+    messages = payload.conversationHistory + [payload.message.model_dump()]
+    final_state = await process_message(messages, channel=channel)
     
     # 4. Callback Trigger
     if final_state.get("scamDetected"):
