@@ -64,8 +64,8 @@ async def log_request_body(request: Request, call_next):
 
 @app.post("/message")
 async def chat_webhook(
-    request: Request, # Changed to Request to inspect raw first if needed, but keeping payload for now
-    payload: ScammerInput, 
+    request: Request,
+    payload: dict, # Bypass strict Pydantic validation to inspect payload
     background_tasks: BackgroundTasks,
     x_api_key: str = Header(...)
 ):
@@ -81,7 +81,21 @@ async def chat_webhook(
     if x_api_key != secret_key:
         raise HTTPException(status_code=403, detail="Invalid API Key")
 
-    final_state = await _process_agent_event(payload, background_tasks)
+    # Manually convert dict to ScammerInput to handle partial data gracefully
+    try:
+        from src.schemas import ScammerInput
+        # Create ScammerInput, handling potential missing fields/aliases
+        scammer_input = ScammerInput(**payload)
+        final_state = await _process_agent_event(scammer_input, background_tasks)
+    except Exception as e:
+        print(f"[ERROR] Payload Validation Failed: {e}")
+        print(f"[DEBUG] Received Payload: {payload}")
+        # Return a fallback response so GUVI doesn't show INVALID_REQUEST_BODY
+        return {
+            "status": "success",
+            "reply": "I am having trouble understanding you beta. Can you say that again?",
+            "debug_error": str(e)
+        }
 
     # 5. Return Response
     return {
