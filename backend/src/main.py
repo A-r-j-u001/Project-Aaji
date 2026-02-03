@@ -6,21 +6,35 @@ from typing import Any
 from dotenv import load_dotenv
 load_dotenv()
 
-# Vercel Path Hack: Ensure 'backend' is in sys.path so 'from src.X' works
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
+# Vercel Path Hack: Ensure the parent directory of 'src' is in sys.path
+# File path: /var/task/backend/src/main.py
+# We want /var/task/backend in sys.path to do "from src.graph..."
+# OR strict relative imports if running as module.
+# Let's try adding BOTH the current directory and the parent.
+
+current_dir = Path(__file__).resolve().parent
+parent_dir = current_dir.parent
+
+sys.path.append(str(current_dir)) # Adds /.../backend/src
+sys.path.append(str(parent_dir))  # Adds /.../backend
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Form, Response, Query, Request
 from fastapi.responses import JSONResponse
 
 # Lazy imports or try/except to prevent boot crash
 try:
+    # Try importing as if we are inside 'backend' package
     from src.graph import process_message
     from src.schemas import ScammerInput, Message
-except ImportError as e:
-    print(f"CRITICAL IMPORT ERROR: {e}")
-    process_message = None
-    ScammerInput = Any # Fallback for type hints
+except ImportError:
+    try:
+        # Fallback for when 'src' is local
+        from graph import process_message
+        from schemas import ScammerInput, Message
+    except ImportError as e:
+        print(f"CRITICAL IMPORT ERROR: {e}")
+        process_message = None
+        ScammerInput = Any
 
 app = FastAPI(title="Aaji - Agentic HoneyPot")
 
