@@ -4,22 +4,25 @@ from typing import Dict, Tuple
 # Gemini Disabled due to recurring library/env crashes
 # import google.generativeai as genai ...
 
+SCAM_KEYWORDS = [
+    "kyc", "expired", "pay", "upi", "bank", "verify", 
+    "update", "deposit", "money", "win", "electricity", "bill",
+    "account blocked", "urgent", "verify now" # Added from GUVI example
+]
+
 async def check_scam_intent(message: dict) -> bool:
     """
     Uses Keywords to analyze if a message is a scam.
     """
     text = message.get("text", "")
-    scam_keywords = [
-        "kyc", "expired", "pay", "upi", "bank", "verify", 
-        "update", "deposit", "money", "win", "electricity", "bill"
-    ]
-    return any(k in text.lower() for k in scam_keywords)
+    return any(k in text.lower() for k in SCAM_KEYWORDS)
 
 import os
 
 import httpx
 
-from src.prompts import AAJI_SYSTEM_PROMPT
+from src.prompts import AAJI_SYSTEM_PROMPT, INTELLIGENCE_PROMPT
+import json
 
 # Gemini Configuration
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
@@ -61,6 +64,25 @@ async def call_gemini_api(history: list, system_prompt: str) -> str:
     except Exception as e:
         print(f"ERROR: Gemini API Failed: {e}")
         return None
+
+async def extract_with_ai(text: str) -> Dict:
+    """
+    Uses Gemini to extract structured intelligence from text.
+    """
+    prompt = INTELLIGENCE_PROMPT.format(text=text)
+    response_text = await call_gemini_api([], prompt)
+    
+    if not response_text:
+        return {}
+        
+    try:
+        # Clean markdown code blocks if present
+        clean_json = response_text.replace("```json", "").replace("```", "").strip()
+        data = json.loads(clean_json)
+        return data
+    except Exception as e:
+        print(f"WARN: AI Extraction Parsing Failed: {e}")
+        return {}
 
 async def run_aaji_persona(messages: list, channel: str = "whatsapp") -> Tuple[Dict, Dict]:
     """
@@ -130,13 +152,23 @@ PHONE_PATTERN = re.compile(r'(\+91[\-\s]?)?(91)?\d{10}')
 LINK_PATTERN = re.compile(
     r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 )
+BANK_ACCOUNT_PATTERN = re.compile(r'\b\d{9,18}\b') # Generic 9-18 digit account number
+IFSC_PATTERN = re.compile(r'^[A-Z]{4}0[A-Z0-9]{6}$')
 
 async def extract_data(text: str) -> Dict:
     """
-    Extracts UPI IDs, Phone numbers, etc. using Regex from spec.md.
-    Optimized to use pre-compiled patterns.
+    Extracts UPI IDs, Phone numbers, etc. using Hybrid approach (Regex + AI).
     """
     extracted = {}
+    
+    # 1. AI Extraction (Intelligent Understanding)
+    ai_data = await extract_with_ai(text)
+    if ai_data:
+        extracted["suspiciousKeywords"] = ai_data.get("suspiciousKeywords", [])
+        extracted["scamType"] = ai_data.get("scamType")
+        extracted["urgencyLevel"] = ai_data.get("urgencyLevel")
+    
+    # 2. Regex Extraction (Precision for Entities)
     
     upi_matches = UPI_PATTERN.findall(text)
     if upi_matches:
@@ -153,6 +185,25 @@ async def extract_data(text: str) -> Dict:
     link_matches = LINK_PATTERN.findall(text)
     if link_matches:
         extracted["phishingLinks"] = link_matches
+
+    # Bank Accounts & IFSC
+    account_matches = BANK_ACCOUNT_PATTERN.findall(text)
+    if account_matches:
+        extracted["bankAccounts"] = account_matches
+    
+    ifsc_matches = IFSC_PATTERN.findall(text)
+    if ifsc_matches:
+        # Append IFSC to bankAccounts if found, or handle separately if schema changes
+        # For now, strict adherence to schema 'bankAccounts'
+        current_accounts = extracted.get("bankAccounts", [])
+        extracted["bankAccounts"] = current_accounts + ifsc_matches
+
+    # Suspicious Keywords (Merge AI + Rule Based)
+    found_keywords = [k for k in SCAM_KEYWORDS if k in text.lower()]
+    existing_keywords = extracted.get("suspiciousKeywords", [])
+    
+    # Merge and deduplicate
+    extracted["suspiciousKeywords"] = list(set(found_keywords + existing_keywords))
         
     return extracted
 
@@ -165,15 +216,15 @@ async def send_guvi_callback(payload: dict):
     print(f"\n[CALLBACK] Sending intelligence to GUVI: {payload}")
     
     # --- REAL INTEGRATION CODE ---
-    # try:
-    #     async with httpx.AsyncClient() as client:
-    #         resp = await client.post(
-    #             "https://hackathon.guvi.in/api/updateHoneyPotFinalResult", 
-    #             json=payload,
-    #             timeout=5.0
-    #         )
-    #         print(f"[CALLBACK] Response: {resp.status_code}")
-    # except Exception as e:
-    #     print(f"[CALLBACK] Failed to reach Guvi: {e}")
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://hackathon.guvi.in/api/updateHoneyPotFinalResult", 
+                json=payload,
+                timeout=5.0
+            )
+            print(f"[CALLBACK] Response: {resp.status_code}")
+    except Exception as e:
+        print(f"[CALLBACK] Failed to reach Guvi: {e}")
     # -----------------------------
     await asyncio.sleep(0.1)

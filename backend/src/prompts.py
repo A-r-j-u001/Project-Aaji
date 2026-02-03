@@ -45,3 +45,22 @@ Scam Indicators:
 
 Respond with JUST "TRUE" if it is a scam, or "FALSE" if safe.
 """
+
+INTELLIGENCE_PROMPT = """You are a Cyber Intelligence Analyst.
+Analyze the following message from a scammer and extract structured intelligence.
+
+Target Message: "{text}"
+
+**Extraction Rules:**
+1. **suspiciousKeywords**: Identify manipulative words (e.g., "urgent", "police", "block", "expired", "kyc").
+2. **scamType**: Classify the scam (e.g., "Phishing", "KYC Fraud", "Lottery", "Sextortion").
+3. **urgencyLevel**: Rate 1-10.
+
+**Output Format (JSON ONLY):**
+{{
+  "suspiciousKeywords": ["word1", "word2"],
+  "scamType": "String",
+  "urgencyLevel": Int
+}}
+If nothing found, return empty lists/null.
+"""

@@ -9,6 +9,9 @@ class Message(BaseModel):
     text: str
     timestamp: Optional[str] = None
 
+    class Config:
+        extra = "allow"
+
 class ScammerInput(BaseModel):
     # model_config = ConfigDict(strict=False)
     sessionId: str = Field(..., alias="session_id") # Allow session_id
@@ -18,7 +21,7 @@ class ScammerInput(BaseModel):
 
     class Config:
         populate_by_name = True
-        extra = "ignore" # Critical for compatibility
+        extra = "allow"
 
 class AgentResponse(BaseModel):
     model_config = ConfigDict(strict=True)
