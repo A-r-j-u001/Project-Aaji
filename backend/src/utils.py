@@ -68,6 +68,7 @@ async def call_gemini_api(history: list, system_prompt: str) -> str:
 async def extract_with_ai(text: str) -> Dict:
     """
     Uses Gemini to extract structured intelligence from text.
+    Robust JSON parsing with multiple fallback strategies.
     """
     prompt = INTELLIGENCE_PROMPT.format(text=text)
     response_text = await call_gemini_api([], prompt)
@@ -76,12 +77,30 @@ async def extract_with_ai(text: str) -> Dict:
         return {}
         
     try:
-        # Clean markdown code blocks if present
+        # Strategy 1: Clean markdown code blocks
         clean_json = response_text.replace("```json", "").replace("```", "").strip()
+        
+        # Strategy 2: Extract JSON from text (handle extra text before/after)
+        # Find first { and last }
+        start = clean_json.find('{')
+        end = clean_json.rfind('}')
+        
+        if start != -1 and end != -1 and end > start:
+            clean_json = clean_json[start:end+1]
+        
+        # Strategy 3: Remove common formatting issues
+        clean_json = clean_json.replace("'", '"')  # Replace single quotes with double quotes
+        clean_json = clean_json.strip()
+        
         data = json.loads(clean_json)
         return data
+    except json.JSONDecodeError as e:
+        print(f"WARN: AI Extraction JSON Parse Failed: {e}")
+        print(f"Response was: {response_text[:200]}...")  # Log first 200 chars
+        # Fallback: Return empty dict, regex will handle extraction
+        return {}
     except Exception as e:
-        print(f"WARN: AI Extraction Parsing Failed: {e}")
+        print(f"WARN: AI Extraction Failed: {e}")
         return {}
 
 async def run_aaji_persona(messages: list, channel: str = "whatsapp") -> Tuple[Dict, Dict]:
