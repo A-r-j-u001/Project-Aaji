@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -7,7 +7,7 @@ class Message(BaseModel):
     # model_config = ConfigDict(strict=False)
     sender: str
     text: str
-    timestamp: Optional[str] = None
+    timestamp: Union[int, str, float, None] = None
 
     class Config:
         extra = "allow"
