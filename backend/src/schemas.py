@@ -29,11 +29,11 @@ class AgentResponse(BaseModel):
     reply: str
 
 class ExtractedIntelligence(BaseModel):
-    bankAccounts: List[str] = []
-    upiIds: List[str] = []
-    phishingLinks: List[str] = []
-    phoneNumbers: List[str] = []
-    suspiciousKeywords: List[str] = []
+    bankAccounts: List[str] = Field(default_factory=list)
+    upiIds: List[str] = Field(default_factory=list)
+    phishingLinks: List[str] = Field(default_factory=list)
+    phoneNumbers: List[str] = Field(default_factory=list)
+    suspiciousKeywords: List[str] = Field(default_factory=list)
 
 class CallbackPayload(BaseModel):
     sessionId: str

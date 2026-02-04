@@ -38,6 +38,49 @@ except ImportError:
 
 app = FastAPI(title="Aaji - Agentic HoneyPot")
 
+# Session Store for Intelligence Aggregation
+from typing import Dict
+
+class SessionStore:
+    """In-memory store for tracking session intelligence across turns"""
+    def __init__(self):
+        self.sessions: Dict[str, dict] = {}
+    
+    def get_session(self, session_id: str) -> dict:
+        if session_id not in self.sessions:
+            self.sessions[session_id] = {
+                "intelligence": {
+                    "bankAccounts": set(),
+                    "upiIds": set(),
+                    "phishingLinks": set(),
+                    "phoneNumbers": set(),
+                    "suspiciousKeywords": set()
+                },
+                "message_count": 0,
+                "scam_detected": False
+            }
+        return self.sessions[session_id]
+    
+    def update_intelligence(self, session_id: str, new_intel: dict):
+        """Merge new intelligence with existing session intelligence"""
+        session = self.get_session(session_id)
+        for key in ["bankAccounts", "upiIds", "phishingLinks", "phoneNumbers", "suspiciousKeywords"]:
+            if key in new_intel and new_intel[key]:
+                session["intelligence"][key].update(new_intel[key])
+    
+    def increment_messages(self, session_id: str):
+        session = self.get_session(session_id)
+        session["message_count"] += 1
+    
+    def get_intel_as_lists(self, session_id: str) -> dict:
+        """Convert sets back to lists for API response"""
+        session = self.get_session(session_id)
+        return {
+            key: list(value) for key, value in session["intelligence"].items()
+        }
+
+session_store = SessionStore()
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
@@ -51,7 +94,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 async def _process_agent_event(payload: ScammerInput, background_tasks: BackgroundTasks) -> dict:
-    """Core logic to invoke the agent"""
+    """Core logic to invoke the agent with session-based intelligence tracking"""
+    session_id = payload.sessionId
+    
+    # 1. Update session message count
+    session_store.increment_messages(session_id)
+    
     # 2. Context Extraction (Channel Agnostic)
     channel = payload.metadata.get("channel", "whatsapp") if payload.metadata else "whatsapp"
     
@@ -59,29 +107,55 @@ async def _process_agent_event(payload: ScammerInput, background_tasks: Backgrou
     messages = payload.conversationHistory + [payload.message.model_dump()]
     final_state = await process_message(messages, channel=channel)
     
-    # 4. Callback Trigger
+    # 4. Intelligence Aggregation
     if final_state.get("scamDetected"):
-        from src.schemas import CallbackPayload, ExtractedIntelligence
-        from src.utils import send_guvi_callback
+        # Mark session as scam detected
+        session = session_store.get_session(session_id)
+        session["scam_detected"] = True
         
+        # Merge new intelligence with accumulated session intelligence
         raw_intel = final_state.get("extractedIntelligence", {})
-        intel_obj = ExtractedIntelligence(
-            bankAccounts=raw_intel.get("bankAccounts", []),
-            upiIds=raw_intel.get("upiIds", []),
-            phishingLinks=raw_intel.get("phishingLinks", []),
-            phoneNumbers=raw_intel.get("phoneNumbers", []),
-            suspiciousKeywords=raw_intel.get("suspiciousKeywords", [])
-        )
-
-        callback_data = CallbackPayload(
-            sessionId=payload.sessionId,
-            scamDetected=True,
-            totalMessagesExchanged=len(payload.conversationHistory) + 1,
-            extractedIntelligence=intel_obj,
-            agentNotes=final_state.get("agentNotes", "Scam detected.")
+        session_store.update_intelligence(session_id, raw_intel)
+        
+        # Get accumulated intelligence
+        accumulated_intel = session_store.get_intel_as_lists(session_id)
+        
+        # Calculate total intelligence items
+        total_intel_items = sum(len(v) for v in accumulated_intel.values())
+        message_count = session["message_count"]
+        
+        # Trigger callback when we have sufficient intelligence OR conversation is long enough
+        should_send_callback = (
+            total_intel_items >= 3 or  # At least 3 pieces of intelligence
+            message_count >= 5  # OR at least 5 messages exchanged
         )
         
-        background_tasks.add_task(send_guvi_callback, callback_data.model_dump())
+        if should_send_callback:
+            from src.schemas import CallbackPayload, ExtractedIntelligence
+            from src.utils import send_guvi_callback
+            
+            intel_obj = ExtractedIntelligence(
+                bankAccounts=accumulated_intel.get("bankAccounts", []),
+                upiIds=accumulated_intel.get("upiIds", []),
+                phishingLinks=accumulated_intel.get("phishingLinks", []),
+                phoneNumbers=accumulated_intel.get("phoneNumbers", []),
+                suspiciousKeywords=accumulated_intel.get("suspiciousKeywords", [])
+            )
+            
+            # Generate agent notes
+            keywords = ', '.join(accumulated_intel.get('suspiciousKeywords', [])[:3])
+            notes = f"Accumulated intelligence across {message_count} turns. Scammer tactics: {keywords}"
+            
+            callback_data = CallbackPayload(
+                sessionId=session_id,
+                scamDetected=True,
+                totalMessagesExchanged=message_count,
+                extractedIntelligence=intel_obj,
+                agentNotes=notes
+            )
+            
+            background_tasks.add_task(send_guvi_callback, callback_data.model_dump())
+            print(f"[CALLBACK] Triggered for session {session_id} with {total_intel_items} intel items")
         
     return final_state
 
