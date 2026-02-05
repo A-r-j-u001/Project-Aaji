@@ -5,7 +5,7 @@ Tests scam detection accuracy, intelligence extraction, and edge cases
 import asyncio
 import httpx
 import json
-from typing import Dict, List
+from typing import Dict
 
 BASE_URL = "http://localhost:8002"
 API_KEY = "hackathon-secret-123"
@@ -170,7 +170,7 @@ class IntelligenceTestSuite:
                     self.passed += 1
                     print(f"✅ {test['name']}: PASS")
                     print(f"   Reply: {data['reply'][:80]}...")
-                    print(f"   Note: Check server logs for extracted intelligence")
+                    print("   Note: Check server logs for extracted intelligence")
                     self.results.append({"test": test['name'], "status": "PASS"})
                 else:
                     self.failed += 1
@@ -293,7 +293,7 @@ class IntelligenceTestSuite:
                     else:
                         self.failed += 1
                         print("❌ Response Format: FAIL")
-                        print(f"   Missing fields or wrong types")
+                        print("   Missing fields or wrong types")
                         self.results.append({"test": "Response Format", "status": "FAIL"})
                 else:
                     self.failed += 1

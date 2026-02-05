@@ -81,17 +81,7 @@ class SessionStore:
 
 session_store = SessionStore()
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=200, # Return 200 so GUVI sees the error message
-        content={
-            "status": "error", 
-            "message": "Internal Server Error (Caught)", 
-            "detail": str(exc),
-            "type": type(exc).__name__
-        }
-    )
+
 
 async def _process_agent_event(payload: ScammerInput, background_tasks: BackgroundTasks) -> dict:
     """Core logic to invoke the agent with session-based intelligence tracking"""

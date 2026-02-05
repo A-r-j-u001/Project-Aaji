@@ -37,7 +37,7 @@ try:
     
     print(f"Status Code: {response.status_code}")
     print(f"Response Headers: {dict(response.headers)}")
-    print(f"\nResponse Body:")
+    print("\nResponse Body:")
     print(json.dumps(response.json(), indent=2))
     
     # Validate response format

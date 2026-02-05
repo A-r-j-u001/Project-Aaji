@@ -17,7 +17,9 @@
 
 ### Base URL
 ```
-https://rotten-fans-spend.loca.lt
+### Base URL
+```
+https://aaji.vercel.app
 ```
 
 ### Authentication
@@ -330,6 +332,6 @@ All errors return valid responses to prevent scammer suspicion.
 
 ---
 
-**Submission Status:** ✅ TESTED & VERIFIED (Screenshot Proof)
+**Submission Status:** ✅ TESTED & VERIFIED (Vercel Production)
 
-**Last Updated:** February 5, 2026, 14:55 IST
+**Last Updated:** February 5, 2026, 15:35 IST
