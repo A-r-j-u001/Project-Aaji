@@ -21,7 +21,7 @@ import os
 
 import httpx
 
-from src.prompts import AAJI_SYSTEM_PROMPT, INTELLIGENCE_PROMPT
+from src.prompts import AGENT_SYSTEM_PROMPT, INTELLIGENCE_PROMPT
 import json
 
 # Gemini Configuration
@@ -103,12 +103,12 @@ async def extract_with_ai(text: str) -> Dict:
         print(f"WARN: AI Extraction Failed: {e}")
         return {}
 
-async def run_aaji_persona(messages: list, channel: str = "whatsapp") -> Tuple[Dict, Dict]:
+async def run_agent_persona(messages: list, channel: str = "whatsapp") -> Tuple[Dict, Dict]:
     """
-    Simulates 'Aaji' engaging the scammer.
+    Simulates the Agent engaging the scammer.
     Strategy: Try AI first -> Fallback to Rules.
     """
-    print(f"DEBUG: Entering run_aaji_persona (Hybrid Mode) - Channel: {channel}")
+    print(f"DEBUG: Entering run_agent_persona (Hybrid Mode) - Channel: {channel}")
     # 1. Extract Intelligence
     last_user_text = messages[-1].get("text", "")
     extracted = await extract_data(last_user_text)
@@ -117,52 +117,53 @@ async def run_aaji_persona(messages: list, channel: str = "whatsapp") -> Tuple[D
     reply_text = None
     
     # Try AI
-    formatted_system_prompt = AAJI_SYSTEM_PROMPT.format(channel=channel)
+    formatted_system_prompt = AGENT_SYSTEM_PROMPT.format(channel=channel)
     reply_text = await call_gemini_api(messages, formatted_system_prompt)
     
     # Fallback to Rule-Based if AI fails
+    # Neutralized Fallbacks (No Grandma/Hearing Aid)
     if not reply_text:
         print("DEBUG: Using Rule-Based Fallback")
         last_msg_lower = last_user_text.lower()
         if extracted.get("upi_id"):
             reply_text = (
-                f"Beta, I am trying to send money to {extracted['upi_id']} "
-                "but my phone says 'Server Error'. Should I go to the ATM?"
+                f"I am trying to send money to {extracted['upi_id']} "
+                "but it says 'Payment Failed'. What should I do?"
             )
         elif extracted.get("phone"):
             reply_text = (
-                f"Okay, I will call you on {extracted['phone']}. "
-                "Please pick up, my hearing aid is buzzing."
+                f"Okay, I will call {extracted['phone']}. "
+                "Can you please stay on the line?"
             )
         elif "kyc" in last_msg_lower:
             reply_text = (
-                "Beta, what is KYC? Is it the same as my pension card? "
-                "I am very old, please help."
+                "What is this KYC? I updated it last year. "
+                "Why is it asking again?"
             )
         elif "otp" in last_msg_lower:
             reply_text = (
-                "OTP? Is that the number on the back of the card? "
-                "It is 4... 2... wait I need my glasses."
+                "I am not receiving any code. "
+                "Can you send it again?"
             )
         elif "card" in last_msg_lower:
              reply_text = (
-                "My card is sbi... wait, grandson said never share card details. "
-                "But you are bank official na?"
+                "I have my card but I am scared to share details. "
+                "Is this really the bank?"
             )
         elif "electricity" in last_msg_lower or "bill" in last_msg_lower:
             reply_text = (
-                "Light bill? But I paid the man who comes to the door yesterday. "
-                "Are you from the government?"
+                "I already paid the bill online. "
+                "Why are you saying it is pending?"
             )
         else:
             reply_text = (
-                "I am pressing the buttons but nothing is happening. "
-                "My grandson Rohan usually does this. Can you wait 5 minutes?"
+                "I don't understand what you mean. "
+                "Please explain properly."
             )
     
     return {
         "text": reply_text,
-        "sender": "aaji"
+        "sender": "agent"
     }, extracted
 
 # Pre-compiled Regex Patterns (Optimization)

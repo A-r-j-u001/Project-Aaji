@@ -4,7 +4,7 @@ Uses plain async functions instead of state machine.
 """
 from typing import Any, Dict, List
 
-from src.utils import check_scam_intent, run_aaji_persona
+from src.utils import check_scam_intent, run_agent_persona
 
 
 async def process_message(messages: List[dict], channel: str = "whatsapp") -> Dict[str, Any]:
@@ -23,13 +23,13 @@ async def process_message(messages: List[dict], channel: str = "whatsapp") -> Di
             "agentNotes": "No scam detected."
         }
     
-    # Step 2: Engage Scammer (Aaji Persona)
-    response, captured_data = await run_aaji_persona(messages, channel=channel)
+    # Step 2: Engage Scammer (Generic Agent Persona)
+    response, captured_data = await run_agent_persona(messages, channel=channel)
     
     return {
         "status": "success",
         "scamDetected": True,
         "extractedIntelligence": captured_data,
-        "agentNotes": "Engaging scammer with 'Fixed Deposit' bait.",
+        "agentNotes": "Engaging scammer with neutral confusion tactics.",
         "reply": response["text"]
     }

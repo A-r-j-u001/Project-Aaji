@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-**Project Name:** Aaji (Grandmother) - Agentic HoneyPot  
+**Project Name:** Agentic HoneyPot - Adaptive Scambaiting System
 **Team/Participant:** Individual Submission  
 **Hackathon:** HCL GUVI AI Impact Summit 2026  
 **Submission Date:** February 5, 2026
@@ -11,7 +11,7 @@
 
 **Challenge:** Build an AI-powered Agentic Honey-Pot system that detects scam messages and autonomously engages scammers to extract actionable intelligence.
 
-**Solution:** Aaji is an autonomous AI agent that adopts the persona of a confused, elderly Indian woman to engage fraudsters, waste their time, and extract intelligence including UPI IDs, phone numbers, bank accounts, and phishing links.
+**Unique Value:** Instead of just blocking, the **Adaptive Agent** engages scammers in long conversations using a **Context-Aware Persona**, wasting their time while silently capturing their financial identifiers (UPI/Bank Details), phone numbers, and phishing links.
 
 ## 🔗 API Endpoint Details
 
