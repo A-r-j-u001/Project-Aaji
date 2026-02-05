@@ -10,7 +10,10 @@ def test_guvi_flow():
         "sessionId": str(uuid.uuid4()),
         "message": {
             "sender": "scammer",
-            "text": "Hello, pay urgently. Sending money to account 1234567890 at http://malicious.com. Urgent verify now.",
+            "text": (
+                "Hello, pay urgently. Sending money to account 1234567890 "
+                "at http://malicious.com. Urgent verify now."
+            ),
             "timestamp": "2024-02-01T10:00:00Z"
         },
         "conversationHistory": [],

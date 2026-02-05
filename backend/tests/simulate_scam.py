@@ -31,12 +31,11 @@ async def run_simulation():
             "metadata": {}
         }
         
-        headers = {"x-api-key": "YOUR_SECRET_KEY"}
+        headers = {"x-api-key": "hackathon-secret-123"}
         
-        resp = await client.post(f"{BASE_URL}/chat", json=payload_kyc, headers=headers)
+        resp = await client.post(f"{BASE_URL}/message", json=payload_kyc, headers=headers)
         if resp.status_code == 200:
             data = resp.json()
-            print("Response:", json.dumps(data, indent=2))
             print("Response:", json.dumps(data, indent=2))
             # Verify Simplified Response
             assert data["status"] == "success"
@@ -59,7 +58,7 @@ async def run_simulation():
             "metadata": {}
         }
         
-        resp = await client.post(f"{BASE_URL}/chat", json=payload_upi, headers=headers)
+        resp = await client.post(f"{BASE_URL}/message", json=payload_upi, headers=headers)
         if resp.status_code == 200:
             data = resp.json()
             print("Response:", json.dumps(data, indent=2))

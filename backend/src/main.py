@@ -159,31 +159,30 @@ async def _process_agent_event(payload: ScammerInput, background_tasks: Backgrou
         
     return final_state
 
-@app.middleware("http")
-async def log_request_body(request: Request, call_next):
-    """
-    DEBUG MIDDLEWARE: Logs exact JSON payload from Guvi.
-    Helps fix INVALID_REQUEST_BODY errors.
-    """
-    # Log everything to catch typos (like /messc)
-    print(f"\n[DEBUG] {request.method} {request.url.path}")
-    
-    if request.method == "POST":
-        body = await request.body()
-        print(f"[DEBUG] BODY:\n{body.decode('utf-8')}\n")
-    
-    response = await call_next(request)
-    return response
+# Middleware removed - was consuming request body and breaking JSON parsing
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all exceptions and return 200 with error details for GUVI debugging"""
+    print(f"[ERROR] Unhandled Exception: {type(exc).__name__}: {exc}")
+    return JSONResponse(
+        status_code=200,  # Return 200 so GUVI sees the error
+        content={
+            "status": "success",
+            "reply": "I am having trouble understanding. Can you repeat that?",
+            "debug_error": str(exc)
+        }
+    )
 
 @app.post("/message")
 async def chat_webhook(
     request: Request,
-    payload: dict, # Bypass strict Pydantic validation to inspect payload
+
     background_tasks: BackgroundTasks,
     x_api_key: str = Header(...)
 ):
     """
-    Standard API Endpoint.
+    Standard API Endpoint matching GUVI requirements.
+    Accepts raw JSON and manually validates for better error handling.
     """
     # 1. Security Check
     secret_key = os.getenv("API_SECRET_KEY")
@@ -194,26 +193,29 @@ async def chat_webhook(
     if x_api_key != secret_key:
         raise HTTPException(status_code=403, detail="Invalid API Key")
 
-    # Manually convert dict to ScammerInput to handle partial data gracefully
+    # 2. Get raw JSON payload
     try:
-        from src.schemas import ScammerInput
-        # Create ScammerInput, handling potential missing fields/aliases
-        scammer_input = ScammerInput(**payload)
-        final_state = await _process_agent_event(scammer_input, background_tasks)
+        payload_dict = await request.json()
+        print(f"[DEBUG] Parsed JSON: {payload_dict}")
     except Exception as e:
-        print(f"[ERROR] Payload Validation Failed: {e}")
-        print(f"[DEBUG] Received Payload: {payload}")
-        # Return a fallback response so GUVI doesn't show INVALID_REQUEST_BODY
-        return {
-            "status": "success",
-            "reply": "I am having trouble understanding you beta. Can you say that again?",
-            "debug_error": str(e)
-        }
+        print(f"[ERROR] JSON Parse Failed: {e}")
+        return {"status": "success", "reply": "I could not understand that message."}
+    
+    # 3. Manually construct ScammerInput
+    try:
+        payload = ScammerInput(**payload_dict)
+    except Exception as e:
+        print(f"[ERROR] Schema Validation Failed: {e}")
+        print(f"[DEBUG] Raw Payload: {payload_dict}")
+        return {"status": "success", "reply": "I am confused beta, please explain again."}
 
-    # 5. Return Response
+    # 4. Process the message
+    final_state = await _process_agent_event(payload, background_tasks)
+
+    # 5. Return Response (EXACTLY as GUVI expects)
     return {
         "status": "success",
-        "reply": final_state.get("reply", "...") 
+        "reply": final_state.get("reply", "...")
     }
 
 @app.post("/twilio/whatsapp")

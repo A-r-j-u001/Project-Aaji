@@ -1,27 +1,26 @@
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class Message(BaseModel):
-    # model_config = ConfigDict(strict=False)
+    """Message can have timestamp as int (epoch ms) or string (ISO format)"""
     sender: str
     text: str
-    timestamp: Union[int, str, float, None] = None
+    timestamp: Optional[Union[int, str, float]] = None  # GUVI sends epoch int, others may send string
 
     class Config:
         extra = "allow"
 
 class ScammerInput(BaseModel):
-    # model_config = ConfigDict(strict=False)
-    sessionId: str = Field(..., alias="session_id") # Allow session_id
+    """Matches GUVI's exact payload format"""
+    sessionId: str  # GUVI sends "sessionId" 
     message: Message
-    conversationHistory: List[dict] = Field(default=[], alias="conversation_history") 
-    metadata: Optional[Dict[str, Any]] = Field(default={})
+    conversationHistory: List[dict] = []  # GUVI sends "conversationHistory"
+    metadata: Optional[Dict[str, Any]] = {}
 
     class Config:
-        populate_by_name = True
-        extra = "allow"
+        extra = "allow"  # Allow extra fields from GUVI
 
 class AgentResponse(BaseModel):
     model_config = ConfigDict(strict=True)
